@@ -1,6 +1,5 @@
 .data
-	
-
+out_string: .asciiz "\nFim de jogo, sua pontuação foi: "
 
 .text
 	
@@ -84,7 +83,7 @@ loopgame:
 	addi	$a0, $zero, 100	# 100 ms
 	syscall
 	
-	beq $t5, 5, counterbytime #quando $t5 for igual a 5, significa que o jogo andou meio segundo, deve atualizar a pontuação
+	beq $t5, 6, counterbytime #quando $t5 for igual a 5, significa que o jogo andou meio segundo, deve atualizar a pontuação
 	addi $t5, $t5, 1#caso contrário, aumentar o contador
 	j verifyinput #pular a atualização de pontos	
 	
@@ -164,21 +163,33 @@ inputup:
 																				
 continueright:
 	addi $t6, $t6, 4#anda para o pixel a direita
-	sw $t2, 0($t6)#pinta pixel
+	lw $t8, 0($t6) #carrega cor do pixel
+	beq $t8, $t2, gameover #se o próximo pixel for o contorno do cenário ou a própria cobra, ir para gameover
+	beq $t8, $s2, getfruit #se o próximo pixel for uma fruta, ir até função de frute
+	sw $t2, 0($t6)#caso contrário, apenas pinta pixel
 	j tailmov #volta para o loop do game								
 
 continueleft:																											
 	addi $t6, $t6, -4#anda para o pixel a esquerda
+	lw $t8, 0($t6) #carrega cor do pixel
+	beq $t8, $t2, gameover #se o próximo pixel for o contorno do cenário ou a própria cobra, ir para gameover
+	beq $t8, $s2, getfruit #se o próximo pixel for uma fruta, ir até função de frute
 	sw $t2, 0($t6)	#pinta pixel
 	j tailmov #volta para o loop do game	
 	
 continueup:
 	addi $t6, $t6, -128#anda para o pixel acima
+	lw $t8, 0($t6) #carrega cor do pixel
+	beq $t8, $t2, gameover #se o próximo pixel for o contorno do cenário ou a própria cobra, ir para gameover
+	beq $t8, $s2, getfruit #se o próximo pixel for uma fruta, ir até função de frute
 	sw $t2, 0($t6)	#pinta pixel
 	j tailmov	#volta para o loop do game																	
 																												
 continuedown:
 	addi $t6, $t6, 128 #anda para o pixel abaixo
+	lw $t8, 0($t6) #carrega cor do pixel
+	beq $t8, $t2, gameover #se o próximo pixel for o contorno do cenário ou a própria cobra, ir para gameover
+	beq $t8, $s2, getfruit #se o próximo pixel for uma fruta, ir até função de frute
 	sw $t2, 0($t6)	#pinta pixel
 	j tailmov	#volta para o loop do game	
 	
@@ -192,7 +203,7 @@ tailmov:
 tailup:
 	lw $t8, 0($t1) #carrega a posição do pixel onde haverá a próxima mudança de movimento
 	sw $zero, 0($t7) #apaga pixel
-	addi $t7, $t7, -128 #anda para o próximo pixel
+	addi $t7, $t7, -128 #anda para o próximo pixel acima
 	bne $t8, $t7, loopgame #se forem diferentes, seguir loop
 	lw $s1, 4($t1) #caso contrário, alterar direção da cauda
 	addi $t1, $t1, 8 #alterando endereço base do array
@@ -202,7 +213,7 @@ tailup:
 taildown:
 	lw $t8, 0($t1) #carrega a posição do pixel onde haverá a próxima mudança de movimento
 	sw $zero, 0($t7) #apaga pixel
-	addi $t7, $t7, 128 #anda para o próximo pixel
+	addi $t7, $t7, 128 #anda para o próximo pixel abaixo
 	bne $t8, $t7, loopgame #se forem diferentes, seguir loop
 	lw $s1, 4($t1) #caso contrário, alterar direção da cauda
 	addi $t1, $t1, 8 #alterando endereço base do array
@@ -212,7 +223,7 @@ taildown:
 tailright:
 	lw $t8, 0($t1) #carrega a posição do pixel onde haverá a próxima mudança de movimento
 	sw $zero, 0($t7) #apaga pixel
-	addi $t7, $t7, 4 #anda para o próximo pixel
+	addi $t7, $t7, 4 #anda para o próximo pixel a direita
 	bne $t8, $t7, loopgame #se forem diferentes, seguir loop
 	lw $s1, 4($t1) #caso contrário, alterar direção da cauda
 	addi $t1, $t1, 8 #alterando endereço base do array
@@ -222,9 +233,78 @@ tailright:
 tailleft:
 	lw $t8, 0($t1) #carrega a posição do pixel onde haverá a próxima mudança de movimento
 	sw $zero, 0($t7) #apaga pixel
-	addi $t7, $t7, -4 #anda para o próximo pixel
+	addi $t7, $t7, -4 #anda para o próximo pixel a esquerda
 	bne $t8, $t7, loopgame #se forem diferentes, seguir loop
 	lw $s1, 4($t1) #caso contrário, alterar direção da cauda
 	addi $t1, $t1, 8 #alterando endereço base do array
 	addi $s3, $s3, -8 #atualizando tamanho
 	j loopgame
+
+getfruit:
+	sw $t2, 0($t6) #pinta pixel
+	addi $s0, $s0, 5 #aumenta pontuação
+	#gerar próxima fruta aleatoriamente
+randomfruit:
+
+	addi $v0, $zero, 42        # Syscall 42: Random int range
+	add $a0, $zero, $zero   # Set RNG ID to 0
+	addi $a1, $zero, 31     # Set upper bound to 4 (exclusive)
+	syscall                  # Generate a random number and put it in $a0
+	add $s4, $zero, $a0     # Copy the random number to $s1
+	
+
+	addi $v0, $zero, 42        # Syscall 42: Random int range
+	add $a0, $zero, $zero   # Set RNG ID to 0
+	addi $a1, $zero, 31     # Set upper bound to 4 (exclusive)
+	syscall                  # Generate a random number and put it in $a0
+	add $s5, $zero, $a0     # Copy the random number to $s1
+	
+	
+	
+	#li $v0, 42
+	#li $a1, 31
+	#syscall
+	#add $s4, $a0, $zero
+	
+	#li $v0, 42
+	#li $a1, 31
+	#syscall
+	#add $s5, $a0, $zero
+	
+	#li $v0, 1
+	#addi $a0, $zero, $s4
+	#syscall
+	
+	#li $v0, 1
+	#addi $a0, $zero, $s5
+	#syscall
+	
+	la $t8, 0x10010000
+	
+	beqz $s4, randomfruit
+	getRow:
+		addi $t8, $t8, 128
+		addi $s4, $s4, -1
+		bgtz $s4, getRow 
+
+	beqz $s5, randomfruit
+	getColumn:
+		addi $t8, $t8, 4
+		addi $s5, $s5, -1
+		bgtz $s5, getColumn 
+	
+	 
+	
+	lw $t9, 0($t8)
+	beq $t9, $t2, randomfruit
+	sw $s2, 0($t8)
+	j loopgame
+
+gameover:
+	li $v0, 56 #syscall para exibir caixa de diálogo
+	la $a0, out_string
+	add $a1, $s0, $zero #a1 recebe a pontuação
+	syscall
+	
+	li $v0, 10 #encerra o programa
+	syscall
