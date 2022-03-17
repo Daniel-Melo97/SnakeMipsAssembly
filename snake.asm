@@ -1,9 +1,9 @@
 .data
-
+	
 
 
 .text
-
+	
 	la $t1, 0x10010000 #posição do primeiro pixel do display
 	li $t2, 16776960 #cor amarela
 	li $s2, 16711680 #cor vermelha para fruta
@@ -47,12 +47,13 @@ bottomborder:
 	addi $t3, $t3, -1 #diminui o contador de pixels da borda inferior
 	bgtz $t3, bottomborder#enquanto não chegar no fim da borda inferior, repetir
 	
-#inicializando dados do jogo
+#inicializando dados do jogo------------------------------------------------------------------------------------
 	
 	li $t6, 268502800 #posição inicial da cobra
 	sw $t2, 0($t6)#desenhando tamanho inicial da cobra
 	sw $t2, -4($t6)#desenhando tamanho inicial da cobra
 	sw $t2, -8($t6) #desenhando tamanho inicial da cobra
+	addi $t7, $t6, -8 #ponta da cauda
 	sw $s2, 32($t6) #desenhando primeira maçã 
 	
 	
@@ -64,6 +65,12 @@ bottomborder:
 	#$t4 = 2, significa que atualmente está indo para a direita
 	#$t4 = 3, significa que atualmente está indo para a esquerda
 	#esses valores serão usados para impedir movimentos inválidos, por exemplo: impedir que o jogador façaa cobra descer, quando ela estiver subindo
+	li $s1, 2 #movimento inicial da cauda, segue o mesmo padrão da cabeça
+	# $t1 #base do array de mudanças de movimento
+	li $s3, 0 #tamanho inicial do array de mudanças de movimento
+	
+	
+	
 loopgame:
 
 	lw $t3, 0xffff0004 #recebe input do usuário
@@ -105,22 +112,42 @@ verifyinput:
 		
 inputright: 
 	beq $t4, 3, continueleft#se a cobra está indo para a esquerda, não mudar o movimento
+	beq $t4, 2, continueright #se já está indo a direita, continuar
 	li $t4, 2 #caso contrário, mudar movimento para a direita
+	add $t8, $t1, $s3 #t7 recebe a memória do final do array
+	sw $t6, 0($t8) #armazena a posição atual(onde houve a mudança de movimento)
+	sw $t4, 4($t8) #armazena a direção do movimento
+	addi $s3, $s3, 8 #aumenta tamanho do array
 	j continueright	#ir para a direita	
 		
 inputleft: 
 	beq $t4, 2, continueright#se a cobra está indo para a direita, não mudar o movimento
+	beq $t4, 3, continueleft #se já está indo a esquerda, continuar
 	li $t4, 3 #caso contrário, mudar movimento para a esquerda
+	add $t8, $t1, $s3 #t7 recebe a memória do final do array
+	sw $t6, 0($t8) #armazena a posição atual(onde houve a mudança de movimento)
+	sw $t4, 4($t8) #armazena a direção do movimento
+	addi $s3, $s3, 8 #aumenta tamanho do array
 	j continueleft	#ir para a esquerda		
 		
 inputdown: 
 	beq $t4, 0, continueup#se a cobra está indo para cima, não mudar o movimento
+	beq $t4, 1, continuedown #se já está indo para baixo, continuar
 	li $t4, 1 #caso contrário, mudar movimento para baixo
+	add $t8, $t1, $s3 #t7 recebe a memória do final do array
+	sw $t6, 0($t8) #armazena a posição atual(onde houve a mudança de movimento)
+	sw $t4, 4($t8) #armazena a direção do movimento
+	addi $s3, $s3, 8 #aumenta tamanho do array
 	j continuedown	#ir para baixo
 		
 inputup: 
 	beq $t4, 1, continuedown#se a cobra está indo para cima, não mudar o movimento
+	beq $t4, 0, continueup #se já está indo para cima, continuar
 	li $t4, 0 #caso contrário, mudar movimento para baixo
+	add $t8, $t1, $s3 #t7 recebe a memória do final do array
+	sw $t6, 0($t8) #armazena a posição atual(onde houve a mudança de movimento)
+	sw $t4, 4($t8) #armazena a direção do movimento
+	addi $s3, $s3, 8 #aumenta tamanho do array
 	j continueup	#ir para baixo			
 
 #pseudocódigo dos continue:
@@ -136,24 +163,68 @@ inputup:
 												
 																				
 continueright:
-	addi $t6, $t6, 4
-	sw $t2, 0($t6)
-	j loopgame										
+	addi $t6, $t6, 4#anda para o pixel a direita
+	sw $t2, 0($t6)#pinta pixel
+	j tailmov #volta para o loop do game								
 
 continueleft:																											
-	addi $t6, $t6, -4
-	sw $t2, 0($t6)	
-	j loopgame
+	addi $t6, $t6, -4#anda para o pixel a esquerda
+	sw $t2, 0($t6)	#pinta pixel
+	j tailmov #volta para o loop do game	
 	
 continueup:
-	addi $t6, $t6, -128
-	sw $t2, 0($t6)	
-	j loopgame																	
+	addi $t6, $t6, -128#anda para o pixel acima
+	sw $t2, 0($t6)	#pinta pixel
+	j tailmov	#volta para o loop do game																	
 																												
 continuedown:
-	addi $t6, $t6, 128
-	sw $t2, 0($t6)	
-	j loopgame																																																																																										
-
-
+	addi $t6, $t6, 128 #anda para o pixel abaixo
+	sw $t2, 0($t6)	#pinta pixel
+	j tailmov	#volta para o loop do game	
 	
+tailmov:																																																																																																																																																																															
+	beq $s1, 0, tailup #se for igual a zero, subir
+	beq $s1, 1, taildown #se for igual a 1, descer
+	beq $s1, 2, tailright #se for igual a 2, ir para a direita
+	beq $s1, 3, tailleft #se for igual a 3, ir para a esquerda
+	
+
+tailup:
+	lw $t8, 0($t1) #carrega a posição do pixel onde haverá a próxima mudança de movimento
+	sw $zero, 0($t7) #apaga pixel
+	addi $t7, $t7, -128 #anda para o próximo pixel
+	bne $t8, $t7, loopgame #se forem diferentes, seguir loop
+	lw $s1, 4($t1) #caso contrário, alterar direção da cauda
+	addi $t1, $t1, 8 #alterando endereço base do array
+	addi $s3, $s3, -8 #atualizando tamanho
+	j loopgame
+	
+taildown:
+	lw $t8, 0($t1) #carrega a posição do pixel onde haverá a próxima mudança de movimento
+	sw $zero, 0($t7) #apaga pixel
+	addi $t7, $t7, 128 #anda para o próximo pixel
+	bne $t8, $t7, loopgame #se forem diferentes, seguir loop
+	lw $s1, 4($t1) #caso contrário, alterar direção da cauda
+	addi $t1, $t1, 8 #alterando endereço base do array
+	addi $s3, $s3, -8 #atualizando tamanho
+	j loopgame
+	
+tailright:
+	lw $t8, 0($t1) #carrega a posição do pixel onde haverá a próxima mudança de movimento
+	sw $zero, 0($t7) #apaga pixel
+	addi $t7, $t7, 4 #anda para o próximo pixel
+	bne $t8, $t7, loopgame #se forem diferentes, seguir loop
+	lw $s1, 4($t1) #caso contrário, alterar direção da cauda
+	addi $t1, $t1, 8 #alterando endereço base do array
+	addi $s3, $s3, -8 #atualizando tamanho
+	j loopgame
+	
+tailleft:
+	lw $t8, 0($t1) #carrega a posição do pixel onde haverá a próxima mudança de movimento
+	sw $zero, 0($t7) #apaga pixel
+	addi $t7, $t7, -4 #anda para o próximo pixel
+	bne $t8, $t7, loopgame #se forem diferentes, seguir loop
+	lw $s1, 4($t1) #caso contrário, alterar direção da cauda
+	addi $t1, $t1, 8 #alterando endereço base do array
+	addi $s3, $s3, -8 #atualizando tamanho
+	j loopgame
