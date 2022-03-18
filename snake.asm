@@ -241,68 +241,48 @@ tailleft:
 	j loopgame
 
 getfruit:
-	sw $t2, 0($t6) #pinta pixel
+	sw $t2, 0($t6) #pinta pixel de amarelo
 	addi $s0, $s0, 5 #aumenta pontuação
 	#gerar próxima fruta aleatoriamente
-randomfruit:
 
-	addi $v0, $zero, 42        # Syscall 42: Random int range
-	add $a0, $zero, $zero   # Set RNG ID to 0
-	addi $a1, $zero, 31     # Set upper bound to 4 (exclusive)
-	syscall                  # Generate a random number and put it in $a0
-	add $s4, $zero, $a0     # Copy the random number to $s1
+randomfruit:# gerando fruta aleatória
+
+	li $v0, 42        # Syscall para gerar número randomico
+	addi $a1, $zero, 31     # limitar para que o número seja entre 0 e 30
+	syscall                  # chamando syscall
+	add $s4, $zero, $a0     # adicionando número aleatório no $s4, esse número irá representar a linha
 	
 
-	addi $v0, $zero, 42        # Syscall 42: Random int range
-	add $a0, $zero, $zero   # Set RNG ID to 0
-	addi $a1, $zero, 31     # Set upper bound to 4 (exclusive)
-	syscall                  # Generate a random number and put it in $a0
-	add $s5, $zero, $a0     # Copy the random number to $s1
+	addi $v0, $zero, 42        # Syscall para gerar número randomico
+	addi $a1, $zero, 31     # limitar para que o número seja entre 0 e 30
+	syscall                  # chamando syscall
+	add $s5, $zero, $a0     # adicionando número aleatório no $s5, esse número irá representar a coluna
 	
 	
+	la $t8, 0x10010000#carregando o endereço base do display bitmap
 	
-	#li $v0, 42
-	#li $a1, 31
-	#syscall
-	#add $s4, $a0, $zero
-	
-	#li $v0, 42
-	#li $a1, 31
-	#syscall
-	#add $s5, $a0, $zero
-	
-	#li $v0, 1
-	#addi $a0, $zero, $s4
-	#syscall
-	
-	#li $v0, 1
-	#addi $a0, $zero, $s5
-	#syscall
-	
-	la $t8, 0x10010000
-	
-	beqz $s4, randomfruit
+	beqz $s4, randomfruit#se a linha for zero, gerar novamente(significa que vai ficar em cima do contorno)
 	getRow:
-		addi $t8, $t8, 128
-		addi $s4, $s4, -1
-		bgtz $s4, getRow 
+		addi $t8, $t8, 128 #desce uma linha
+		addi $s4, $s4, -1 #diminui contador de linhas
+		bgtz $s4, getRow #repetir até chegar na linha correspondente
 
-	beqz $s5, randomfruit
+	beqz $s5, randomfruit#se a linha for 0, gerar novamente(significa que vai ficar em cima do contorno)
 	getColumn:
-		addi $t8, $t8, 4
-		addi $s5, $s5, -1
-		bgtz $s5, getColumn 
+		addi $t8, $t8, 4 #anda uma coluna a direita
+		addi $s5, $s5, -1 #diminui contador de colunas
+		bgtz $s5, getColumn #repetir até chegar na coluna correspondente
 	
 	 
 	
-	lw $t9, 0($t8)
-	beq $t9, $t2, randomfruit
-	sw $s2, 0($t8)
-	j loopgame
+	lw $t9, 0($t8) #carrega o valor(cor) no endereço gerado randomicamente
+	beq $t9, $t2, randomfruit # se a cor for amarela, significa que é o contorno ou a própria cobra, nesse caso, gerar numero randomico de novo
+	sw $s2, 0($t8) #caso contrário, pintar o pixel de vermelho, colocando a fruta no cenário
+	j loopgame #voltar ao loop do jogo
 
 gameover:
 	li $v0, 56 #syscall para exibir caixa de diálogo
-	la $a0, out_string
+	la $a0, out_string #passando a string para exibição na caixa de diálogo
 	add $a1, $s0, $zero #a1 recebe a pontuação
 	syscall
 	
